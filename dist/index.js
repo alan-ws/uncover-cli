@@ -16,44 +16,72 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const figlet_1 = __importDefault(require("figlet"));
 const node_path_1 = __importDefault(require("node:path"));
-const node_fs_1 = require("node:fs");
+const promises_1 = require("node:fs/promises");
+const prompts_1 = require("@inquirer/prompts");
+const node_child_process_1 = require("node:child_process");
 const program = new commander_1.Command();
 console.log(figlet_1.default.textSync("uncover"));
 const opts = program.opts();
-const iAccess = (fpath) => {
-    return new Promise((resolve) => (0, node_fs_1.access)(fpath, node_fs_1.constants.X_OK, (err) => resolve(err ? undefined : fpath)));
-};
-const isExecutable = (abspath) => __awaiter(void 0, void 0, void 0, function* () {
-    const envvars = process.env;
-    const exts = (envvars.PATHEXT || "").split(node_path_1.default.delimiter).concat("");
-    const bins = yield Promise.all(exts.map((ext) => iAccess(abspath + ext)));
-    return bins.find((bin) => !!bin);
-});
+function execute(filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const envvars = process.env;
+        const exts = (envvars.PATHEXT || '').split(node_path_1.default.delimiter).concat('');
+        const bins = yield Promise.all(exts.map((ext) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield (0, promises_1.access)(filePath + ext, promises_1.constants.X_OK);
+                return filePath + ext;
+            }
+            catch (err) {
+                // console.error(err)
+                return undefined;
+            }
+        })));
+        return bins.find(bin => !!bin);
+    });
+}
+// const exec = (fpath: string): Promise<string | undefined> => {
+//   return new Promise(resolve => fs.access(fpath, fs.constants.X_OK, err => resolve(err ? undefined : fpath)));
+// };
 program
     .version("1.0.0")
     .description("An example CLI for managing a directory")
     .option("-i --install", "Install the core, base components")
     .option("-ii --interactive-install", "Interactive install - requires complete new install")
-    .option("-rl --run-local", "Run test on local machine")
+    .option("-r --run", "Run test on local machine")
     .action(() => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    if (opts.interactiveInstall) {
-        console.log("performing initial checks");
-        const m = "node".includes(node_path_1.default.sep) ? node_path_1.default.resolve("node") : undefined;
-        const d = (_a = process.env.PATH) === null || _a === void 0 ? void 0 : _a.split(node_path_1.default.delimiter).concat([]).filter((p) => !(undefined || []).includes(p));
-        const b = yield Promise.all(d.map((s) => isExecutable(node_path_1.default.join(s, "node"))));
-        console.log(b);
-        //   let answers = await checkbox({
-        //     message: "Select the components you need",
-        //     choices: [
-        //       new Separator(
-        //         "== Components (choices cycle as you scroll through) =="
-        //       ),
-        //       { value: "disruptor" },
-        //       { value: "distributed-tracing" },
-        //     ],
-        //   });
+    if (opts.install) {
+        if (process.platform === 'win32') {
+            let answer = yield (0, prompts_1.select)({
+                message: "Select your Windows package manner",
+                choices: [
+                    new prompts_1.Separator("== Package Managers [Enter to select] =="),
+                    { value: "choco" },
+                    { value: "scoop" },
+                    { value: "winget" }
+                ],
+            });
+            const child = (0, node_child_process_1.exec)(`${answer} install k6`, (e, sto, ste) => {
+                // console.log(sto)
+            });
+            (_a = child.stdout) === null || _a === void 0 ? void 0 : _a.on('data', console.log);
+            console.log('does it fuck out');
+        }
+        console.log(process.platform);
     }
+    // if (opts.interactiveInstall) {
+    //   let filePath = "go".includes(path.sep) ? path.resolve("go") : undefined;
+    //   if (filePath) await execute(filePath);
+    //   let dirs = process.env.PATH?.split(path.delimiter);
+    //   let bins = await Promise.all(dirs!.map(async dir => {
+    //     try {
+    //       return await execute(path.join(dir, "go"))
+    //     } catch (er) {
+    //       // console.error(er)
+    //     }
+    //   }));
+    //   const goPath = bins.find(bin => !!bin)
+    // }
 }))
     .parse(process.argv);
 if (!process.argv.slice(2).length) {

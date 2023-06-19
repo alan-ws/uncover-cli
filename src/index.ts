@@ -2,26 +2,36 @@
 
 import { Command } from "commander";
 import figlet from "figlet";
-import util from "node:util";
 import path from "node:path";
-import { access, constants } from "node:fs";
-import { takeCoverage } from "node:v8";
+import { access, constants } from "node:fs/promises";
+import { Separator, select } from "@inquirer/prompts";
+import { spawn } from "node:child_process";
+import { exec } from "node:child_process";
 
 const program = new Command();
 console.log(figlet.textSync("uncover"));
 const opts = program.opts();
 
-const iAccess = (fpath: string): Promise<string | undefined> => {
-  return new Promise((resolve) =>
-    access(fpath, constants.X_OK, (err) => resolve(err ? undefined : fpath))
-  );
-};
-const isExecutable = async (abspath: string): Promise<string | undefined> => {
+async function execute(filePath: string) {
   const envvars = process.env;
-  const exts = (envvars.PATHEXT || "").split(path.delimiter).concat("");
-  const bins = await Promise.all(exts.map((ext) => iAccess(abspath + ext)));
-  return bins.find((bin) => !!bin);
-};
+  const exts = (envvars.PATHEXT || '').split(path.delimiter).concat('');
+
+  const bins = await Promise.all(exts.map(async ext => {
+    try {
+      await access(filePath + ext, constants.X_OK)
+      return filePath + ext;
+    } catch (err) {
+      // console.error(err)
+      return undefined
+    }
+  }));
+  return bins.find(bin => !!bin);
+}
+
+// const exec = (fpath: string): Promise<string | undefined> => {
+//   return new Promise(resolve => fs.access(fpath, fs.constants.X_OK, err => resolve(err ? undefined : fpath)));
+// };
+
 program
   .version("1.0.0")
   .description("An example CLI for managing a directory")
@@ -30,33 +40,46 @@ program
     "-ii --interactive-install",
     "Interactive install - requires complete new install"
   )
-  .option("-rl --run-local", "Run test on local machine")
+  .option("-r --run", "Run test on local machine")
   .action(async () => {
-    if (opts.interactiveInstall) {
-      console.log("performing initial checks");
+    if (opts.install) {
+      if (process.platform === 'win32') {
+        let answer = await select({
+          message: "Select your Windows package manner",
+          choices: [
+            new Separator(
+              "== Package Managers [Enter to select] =="
+            ),
+            { value: "choco" },
+            { value: "scoop" },
+            { value: "winget" }
+          ],
+        });
 
-      const m = "node".includes(path.sep) ? path.resolve("node") : undefined;
-      const d = process.env.PATH?.split(path.delimiter)
-        .concat([])
-        .filter((p) => !(undefined || []).includes(p as never));
-      const b = await Promise.all(
-        d!.map((s) => isExecutable(path.join(s, "node")))
-      );
-      console.log(b);
-      //   let answers = await checkbox({
-      //     message: "Select the components you need",
-      //     choices: [
-      //       new Separator(
-      //         "== Components (choices cycle as you scroll through) =="
-      //       ),
-      //       { value: "disruptor" },
-      //       { value: "distributed-tracing" },
-      //     ],
-      //   });
+        const child = exec(`${answer} install k6`, (e, sto, ste) => {
+          // console.log(sto)
+        })
+        child.stdout?.on('data', console.log)
+      }
+      console.log(process.platform)
     }
+    // if (opts.interactiveInstall) {
+    //   let filePath = "go".includes(path.sep) ? path.resolve("go") : undefined;
+    //   if (filePath) await execute(filePath);
+    //   let dirs = process.env.PATH?.split(path.delimiter);
+    //   let bins = await Promise.all(dirs!.map(async dir => {
+    //     try {
+    //       return await execute(path.join(dir, "go"))
+    //     } catch (er) {
+    //       // console.error(er)
+    //     }
+    //   }));
+    //   const goPath = bins.find(bin => !!bin)
+    // }
   })
   .parse(process.argv);
 
 if (!process.argv.slice(2).length) {
   program.outputHelp();
 }
+
