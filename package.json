@@ -1,0 +1,28 @@
+{
+  "name": "uncover",
+  "version": "1.0.0",
+  "bin": {
+    "uncover": "./dist/index.js"
+  },
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "pnpm exec tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@inquirer/prompts": "^2.1.1",
+    "@types/inquirer": "^9.0.3",
+    "commander": "^10.0.1",
+    "figlet": "^1.6.0",
+    "inquirer": "^9.2.7"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.5.6",
+    "@types/node": "^20.3.0",
+    "typescript": "^5.1.3"
+  }
+}
