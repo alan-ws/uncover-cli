@@ -1,9 +1,5 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 dependencies:
   '@inquirer/prompts':
     specifier: ^2.1.1
@@ -11,6 +7,9 @@ dependencies:
   '@types/inquirer':
     specifier: ^9.0.3
     version: 9.0.3
+  '@types/k6':
+    specifier: ^0.45.0
+    version: 0.45.0
   commander:
     specifier: ^10.0.1
     version: 10.0.1
@@ -20,6 +19,9 @@ dependencies:
   inquirer:
     specifier: ^9.2.7
     version: 9.2.7
+  k6:
+    specifier: ^0.0.0
+    version: 0.0.0
 
 devDependencies:
   '@types/figlet':
@@ -158,6 +160,10 @@ packages:
     dependencies:
       '@types/through': 0.0.30
       rxjs: 7.8.1
+    dev: false
+
+  /@types/k6@0.45.0:
+    resolution: {integrity: sha512-ySQ1LQ67kqYz/4W6oJ/9afPWHV/2GYKVUQFkOzM+fBtY2POCY8D7GX4F6rT0R8u2Be/DK8s1Ypr2s+LbToj/oA==}
     dev: false
 
   /@types/node@20.3.1:
@@ -373,6 +379,10 @@ packages:
     engines: {node: '>=12'}
     dev: false
 
+  /k6@0.0.0:
+    resolution: {integrity: sha512-GAQSWayS2+LjbH5bkRi+pMPYyP1JSp7o+4j58ANZ762N/RH/SdlAT3CHHztnn8s/xgg8kYNM24Gd2IPo9b5W+g==}
+    dev: false
+
   /lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
     dev: false
@@ -535,3 +545,7 @@ packages:
       string-width: 4.2.3
       strip-ansi: 6.0.1
     dev: false
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false

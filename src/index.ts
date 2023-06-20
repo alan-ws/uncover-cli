@@ -5,32 +5,32 @@ import figlet from "figlet";
 import path from "node:path";
 import { access, constants } from "node:fs/promises";
 import { Separator, select } from "@inquirer/prompts";
-import { spawn } from "node:child_process";
 import { exec } from "node:child_process";
+import { exit } from "node:process";
+import { promisify } from "node:util";
+const execified = promisify(exec);
 
 const program = new Command();
 console.log(figlet.textSync("uncover"));
 const opts = program.opts();
 
-async function execute(filePath: string) {
-  const envvars = process.env;
-  const exts = (envvars.PATHEXT || '').split(path.delimiter).concat('');
+// async function execute(filePath: string) {
+//   const envvars = process.env;
+//   const exts = (envvars.PATHEXT || "").split(path.delimiter).concat("");
 
-  const bins = await Promise.all(exts.map(async ext => {
-    try {
-      await access(filePath + ext, constants.X_OK)
-      return filePath + ext;
-    } catch (err) {
-      // console.error(err)
-      return undefined
-    }
-  }));
-  return bins.find(bin => !!bin);
-}
-
-// const exec = (fpath: string): Promise<string | undefined> => {
-//   return new Promise(resolve => fs.access(fpath, fs.constants.X_OK, err => resolve(err ? undefined : fpath)));
-// };
+//   const bins = await Promise.all(
+//     exts.map(async (ext) => {
+//       try {
+//         await access(filePath + ext, constants.X_OK);
+//         return filePath + ext;
+//       } catch (err) {
+//         // console.error(err)
+//         return undefined;
+//       }
+//     })
+//   );
+//   return bins.find((bin) => !!bin);
+// }
 
 program
   .version("1.0.0")
@@ -42,26 +42,55 @@ program
   )
   .option("-r --run", "Run test on local machine")
   .action(async () => {
+    if (opts.run) {
+      console.log(path.join(__dirname, "script.js"));
+      const { stderr, stdout } = exec(
+        `k6 run ${path.join(__dirname, "script.js")}`
+      );
+
+      stdout?.on("data", (data) => {
+        console.log(data);
+      });
+    }
+
+    let answer: string | undefined;
     if (opts.install) {
-      if (process.platform === 'win32') {
-        let answer = await select({
+      if (process.platform === "win32") {
+        answer = await select({
           message: "Select your Windows package manner",
           choices: [
-            new Separator(
-              "== Package Managers [Enter to select] =="
-            ),
+            new Separator("== Package Managers [Enter to select] =="),
             { value: "choco" },
             { value: "scoop" },
-            { value: "winget" }
+            { value: "winget" },
+            { value: "other" },
           ],
         });
+      }
 
+      if (process.platform === "darwin") {
+        answer = await select({
+          message: "Select your Windows package manner",
+          choices: [
+            new Separator("== Package Managers [Enter to select] =="),
+            { value: "brew" },
+            { value: "other" },
+          ],
+        });
+      }
+
+      console.log(answer);
+      if (answer === "other") {
+        console.log(
+          "Use the interactive install [uncover -ii] to build from binary"
+        );
+        exit;
+      } else {
         const child = exec(`${answer} install k6`, (e, sto, ste) => {
           // console.log(sto)
-        })
-        child.stdout?.on('data', console.log)
+        });
+        child.stdout?.on("data", console.log);
       }
-      console.log(process.platform)
     }
     // if (opts.interactiveInstall) {
     //   let filePath = "go".includes(path.sep) ? path.resolve("go") : undefined;
@@ -82,4 +111,3 @@ program
 if (!process.argv.slice(2).length) {
   program.outputHelp();
 }
-

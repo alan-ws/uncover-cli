@@ -16,32 +16,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const figlet_1 = __importDefault(require("figlet"));
 const node_path_1 = __importDefault(require("node:path"));
-const promises_1 = require("node:fs/promises");
 const prompts_1 = require("@inquirer/prompts");
 const node_child_process_1 = require("node:child_process");
+const node_process_1 = require("node:process");
+const node_util_1 = require("node:util");
+const execified = (0, node_util_1.promisify)(node_child_process_1.exec);
 const program = new commander_1.Command();
 console.log(figlet_1.default.textSync("uncover"));
 const opts = program.opts();
-function execute(filePath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const envvars = process.env;
-        const exts = (envvars.PATHEXT || '').split(node_path_1.default.delimiter).concat('');
-        const bins = yield Promise.all(exts.map((ext) => __awaiter(this, void 0, void 0, function* () {
-            try {
-                yield (0, promises_1.access)(filePath + ext, promises_1.constants.X_OK);
-                return filePath + ext;
-            }
-            catch (err) {
-                // console.error(err)
-                return undefined;
-            }
-        })));
-        return bins.find(bin => !!bin);
-    });
-}
-// const exec = (fpath: string): Promise<string | undefined> => {
-//   return new Promise(resolve => fs.access(fpath, fs.constants.X_OK, err => resolve(err ? undefined : fpath)));
-// };
+// async function execute(filePath: string) {
+//   const envvars = process.env;
+//   const exts = (envvars.PATHEXT || "").split(path.delimiter).concat("");
+//   const bins = await Promise.all(
+//     exts.map(async (ext) => {
+//       try {
+//         await access(filePath + ext, constants.X_OK);
+//         return filePath + ext;
+//       } catch (err) {
+//         // console.error(err)
+//         return undefined;
+//       }
+//     })
+//   );
+//   return bins.find((bin) => !!bin);
+// }
 program
     .version("1.0.0")
     .description("An example CLI for managing a directory")
@@ -50,24 +48,48 @@ program
     .option("-r --run", "Run test on local machine")
     .action(() => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
+    if (opts.run) {
+        console.log(node_path_1.default.join(__dirname, "script.js"));
+        const { stderr, stdout } = (0, node_child_process_1.exec)(`k6 run ${node_path_1.default.join(__dirname, "script.js")}`);
+        stdout === null || stdout === void 0 ? void 0 : stdout.on("data", (data) => {
+            console.log(data);
+        });
+    }
+    let answer;
     if (opts.install) {
-        if (process.platform === 'win32') {
-            let answer = yield (0, prompts_1.select)({
+        if (process.platform === "win32") {
+            answer = yield (0, prompts_1.select)({
                 message: "Select your Windows package manner",
                 choices: [
                     new prompts_1.Separator("== Package Managers [Enter to select] =="),
                     { value: "choco" },
                     { value: "scoop" },
-                    { value: "winget" }
+                    { value: "winget" },
+                    { value: "other" },
                 ],
             });
+        }
+        if (process.platform === "darwin") {
+            answer = yield (0, prompts_1.select)({
+                message: "Select your Windows package manner",
+                choices: [
+                    new prompts_1.Separator("== Package Managers [Enter to select] =="),
+                    { value: "brew" },
+                    { value: "other" },
+                ],
+            });
+        }
+        console.log(answer);
+        if (answer === "other") {
+            console.log("Use the interactive install [uncover -ii] to build from binary");
+            node_process_1.exit;
+        }
+        else {
             const child = (0, node_child_process_1.exec)(`${answer} install k6`, (e, sto, ste) => {
                 // console.log(sto)
             });
-            (_a = child.stdout) === null || _a === void 0 ? void 0 : _a.on('data', console.log);
-            console.log('does it fuck out');
+            (_a = child.stdout) === null || _a === void 0 ? void 0 : _a.on("data", console.log);
         }
-        console.log(process.platform);
     }
     // if (opts.interactiveInstall) {
     //   let filePath = "go".includes(path.sep) ? path.resolve("go") : undefined;
