@@ -2,9 +2,11 @@
 
 import { Command } from "commander";
 import figlet from "figlet";
-import path from "node:path";
+import { join } from "node:path";
 import { access, constants } from "node:fs/promises";
 import { Separator, select } from "@inquirer/prompts";
+import { writeFile, mkdtemp, rmdir, rm } from "node:fs/promises"
+import { tmpdir } from "node:os";
 import { exec } from "node:child_process";
 import { exit } from "node:process";
 import { promisify } from "node:util";
@@ -17,7 +19,6 @@ const opts = program.opts();
 // async function execute(filePath: string) {
 //   const envvars = process.env;
 //   const exts = (envvars.PATHEXT || "").split(path.delimiter).concat("");
-
 //   const bins = await Promise.all(
 //     exts.map(async (ext) => {
 //       try {
@@ -32,6 +33,16 @@ const opts = program.opts();
 //   return bins.find((bin) => !!bin);
 // }
 
+const basic = (url: string) => `
+import http from "k6/http";
+import { sleep } from "k6";
+
+export default function () {
+    http.get("${url}");
+    sleep(1);
+}
+`
+
 program
   .version("1.0.0")
   .description("An example CLI for managing a directory")
@@ -40,17 +51,27 @@ program
     "-ii --interactive-install",
     "Interactive install - requires complete new install"
   )
-  .option("-r --run", "Run test on local machine")
+  .option("-r --run [file] [url]", "Run test on local machine")
   .action(async () => {
     if (opts.run) {
-      console.log(path.join(__dirname, "script.js"));
-      const { stderr, stdout } = exec(
-        `k6 run ${path.join(__dirname, "script.js")}`
-      );
+      if (typeof opts.run === 'string') {
+        if (opts.run.startsWith('https') || opts.run.includes('.com')) {
+          const dir = await mkdtemp(join(tmpdir(), 'uncover-'))
+          await writeFile(`${join(dir, "/script.js")}`, basic(opts.run))
+          const { stderr, stdout } = await execified(
+            `k6 run ${join(dir, "/script.js")}`
+          );
+          console.log(stdout)
+          await rm(join(dir, "/script.js"))
+          await rmdir(dir)
+          return;
+        }
+        const { stderr, stdout } = await execified(
+          `k6 run ${join(__dirname, opts.run)}`
+        );
 
-      stdout?.on("data", (data) => {
-        console.log(data);
-      });
+        console.log(stdout)
+      }
     }
 
     let answer: string | undefined;
