@@ -1,17 +1,23 @@
 import { Separator, select } from "@inquirer/prompts";
-import { Command } from "commander";
+import { Command, OptionValues } from "commander";
 import { exit } from "node:process";
 import { streamableExec } from "../utils";
 
+interface M extends Object, OptionValues { }
 
 export function install() {
     const program = new Command('install')
     program
         .description('default non-interactive installation')
-        // .option('-i --interactive', 'install from binary and select packages')
-        .action(async () => {
+        .option('-i --interactive', 'install from binary and select packages')
+        .action(async (op: M) => {
             if (program.args.length > 1) {
                 throw Error('install does not accept arguements')
+            }
+
+            if (op.hasOwnProperty('interactive')) {
+                console.log('Not implemented')
+                return
             }
 
             let answer: string | undefined;
