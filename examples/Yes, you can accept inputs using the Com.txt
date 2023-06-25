@@ -1,0 +1,62 @@
+Yes, you can accept inputs using the Commander library. There are two ways to accept inputs:
+
+Using arguments. Arguments are positional parameters that follow the command name. You can define arguments using the .argument() method on a command instance. You can specify the name, description, and validation for each argument. You can also use brackets [] or angle brackets <> to indicate optional or required arguments respectively. For example:
+// Define a command with two arguments
+program
+  .command('add')
+  .description('add two numbers')
+  // Define the first argument as required
+  .argument('<num1>', 'first number', parseFloat)
+  // Define the second argument as optional
+  .argument('[num2]', 'second number', parseFloat, 0)
+  // Define the action handler for the command
+  .action((num1, num2) => {
+    // Do something with the arguments
+    console.log(num1 + num2);
+  });
+Copy
+This will create a command add that accepts two arguments: a required number and an optional number. The arguments are parsed as floats and have default values of NaN and 0 respectively. You can run the command as follows:
+
+$ my-cli add 3 4
+7
+
+$ my-cli add 5
+5
+
+$ my-cli add
+NaN
+Copy
+Using options. Options are named parameters that start with a dash - or a double dash --. You can define options using the .option() method on a command instance. You can specify the flags, description, and processing for each option. You can also use different types of options, such as boolean, value, variadic, or required. For example:
+// Define a command with two options
+program
+  .command('greet')
+  .description('greet someone')
+  // Define a boolean option
+  .option('-c, --capitalize', 'capitalize the name')
+  // Define a value option
+  .option('-n, --name <name>', 'name to greet', 'stranger')
+  // Define the action handler for the command
+  .action((options) => {
+    // Access the parsed options as an object
+    const opts = program.opts();
+    // Do something with the options
+    let name = opts.name;
+    if (opts.capitalize) {
+      name = name.toUpperCase();
+    }
+    console.log(`Hello ${name}`);
+  });
+Copy
+This will create a command greet that accepts two options: a boolean option to capitalize the name and a value option to specify the name. The value option has a default value of 'stranger'. You can run the command as follows:
+
+$ my-cli greet -c -n John
+Hello JOHN
+
+$ my-cli greet --name Jane
+Hello Jane
+
+$ my-cli greet -c
+Hello STRANGER
+
+$ my-cli greet
+Hello stranger
