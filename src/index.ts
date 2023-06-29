@@ -5,6 +5,7 @@ import figlet from "figlet";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { install } from "./commnds/install";
+import { link } from "./commnds/link";
 
 let program = new Command();
 console.log(figlet.textSync("uncover"));
@@ -17,11 +18,13 @@ program
 
 program
   .option('-v, --verbose', 'enable verbose mode')
-  .option('-d, --debug', 'enable debug mode');
+  // .option('-d, --debug', 'enable debug mode');
 
 const installCommand = install();
+const linkCommand = link();
 
 program.addCommand(installCommand)
+program.addCommand(linkCommand)
 program.parse()
 // .option("-i --install", "Install the core, base components")
 // .option(
