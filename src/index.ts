@@ -11,21 +11,20 @@ let program = new Command();
 console.log(figlet.textSync("uncover"));
 
 program
-  .name('uncover')
+  .name("uncover")
   .version("1.0.0")
   .description("An example CLI for managing a directory")
-  .usage('<command> [options] [...]')
+  .usage("<command> [options] [...]");
 
-program
-  .option('-v, --verbose', 'enable verbose mode')
-  // .option('-d, --debug', 'enable debug mode');
+program.option("-v, --verbose", "enable verbose mode");
+// .option('-d, --debug', 'enable debug mode');
 
 const installCommand = install();
 const linkCommand = link();
 
-program.addCommand(installCommand)
-program.addCommand(linkCommand)
-program.parse()
+program.addCommand(installCommand);
+program.addCommand(linkCommand);
+program.parse();
 // .option("-i --install", "Install the core, base components")
 // .option(
 //   "-ii --interactive-install",
@@ -116,5 +115,5 @@ program.parse()
 
 if (!process.argv.slice(2).length) {
   program.outputHelp();
-  console.log('\n')
+  console.log("\n");
 }
