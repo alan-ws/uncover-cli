@@ -4,6 +4,7 @@ import { exit, prependOnceListener } from "node:process";
 import { streamableExec } from "../utils";
 import path from "node:path";
 import { appendFileSync, existsSync, readFile, readFileSync, writeFileSync } from "node:fs";
+import XDGAppPaths from "xdg-app-paths"
 
 interface M extends Object, OptionValues { }
 
@@ -32,6 +33,22 @@ export function link() {
                 // maybe ask if the user would like to link the project and output help on no
             }
 
+            const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
+            const { token } = JSON.parse(readFileSync(path.join(vercelDirectories[0].replace('xdg.data\\com.vercel', 'com.vercel.cli'), 'Data', 'auth.json'), {
+                encoding: 'utf-8',
+            }))
+            console.log(token)
+
+            const res = await fetch("https://api.vercel.com/v9/projects?teamId=team_4HuspICVxHSNsdkf6gZuHeHJ", {
+                method: 'GET',
+                headers: {
+                    authorization: `bearer ${token}`,
+                    'content-type': 'application/json'
+                }
+            })
+
+            console.log(await res.json())
+
             if (op.hasOwnProperty('directory')) {
                 let dir = op.directory
                 if (dir === true) dir = process.cwd()
@@ -47,6 +64,7 @@ export function link() {
                     else { console.log('Add uncover.json to .vercelignore'); appendFileSync(path.join(dir, '.gitignore'), '\n#uncover\n uncover.json') }
                     console.log("\n")
                 } else console.log('Project is already linked. uncover.json is present at the root of directory\n')
+
             }
         })
     return program

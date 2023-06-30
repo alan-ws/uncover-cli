@@ -17,13 +17,14 @@
     "@inquirer/prompts": "^2.1.1",
     "commander": "^10.0.1",
     "figlet": "^1.6.0",
-    "inquirer": "^9.2.7"
+    "inquirer": "^9.2.7",
+    "xdg-app-paths": "^8.3.0"
   },
   "devDependencies": {
     "@types/figlet": "^1.5.6",
-    "@types/node": "^20.3.1",
     "@types/inquirer": "^9.0.3",
     "@types/k6": "^0.45.0",
+    "@types/node": "^20.3.1",
     "k6": "^0.0.0",
     "typescript": "^5.1.3"
   }
