@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { access, constants } from "node:fs/promises";
+import { execified } from "../utils";
 
 async function fileExists<T>(dir: string, fileName: T): Promise<Map<T, boolean>> {
   return new Map().set(fileName, existsSync(path.join(dir, (fileName as string))))
@@ -20,9 +21,9 @@ async function handleUncover(args: string) {
     path.join(args, "uncover.json"),
     JSON.stringify({
       uncover: "enabled",
-      projectId: "",
-      teamId: "",
-      gitUserName: ""
+      projectId: getProjectId() || "",
+      teamId: getTeamId() || "",
+      gitUserName: getGitUserName() ?? ""
     }),
     { encoding: "utf-8" }
   );
@@ -58,9 +59,34 @@ async function handleVercelIgnore(value: Map<'uncover.json' | '.gitignore' | '.v
   }
 }
 
-function getPID() {
+function canAccessR_OK(args: string) {
+  try {
+    access(args, constants.R_OK)
+    console.log(`uncover can access: ${args}`)
+  } catch (err) {
+    console.log(`uncover does not have read permissions for: ${args}`)
+    exit(1)
+  }
+}
+
+function getProjectId() {
+  canAccessR_OK(path.join(process.cwd(), '.vercel', 'project.json'))
   const file = JSON.parse(readFileSync(path.join(process.cwd(), '.vercel', 'project.json'), { encoding: 'utf-8' }))
   return file.projectId
+}
+
+function getTeamId() {
+  canAccessR_OK(path.join(process.cwd(), '.vercel', 'project.json'))
+  const file = JSON.parse(readFileSync(path.join(process.cwd(), '.vercel', 'project.json'), { encoding: 'utf-8' }))
+  return file.orgId
+}
+
+async function getGitUserName() {
+  canAccessR_OK(path.join(process.cwd(), '.git'))
+  const { stderr, stdout } = await execified('git config --list')
+  if (stderr) exit(1);
+  console.log(stdout.match(/user\.name=(.*)\n/)![1])
+  return stdout.match(/user\.name=(.*)\n/) === null ? null : stdout.match(/user\.name=(.*)\n/)![1]
 }
 
 export function link() {
@@ -75,8 +101,9 @@ export function link() {
   const teamIdOption = new Option("-t --team-id [id]", "vercel team id")
 
   projectIdOption.default("takes value from .vercel/project.json if present")
-  projectIdOption.preset(getPID())
+  projectIdOption.preset(getProjectId())
   projectIdOption.argParser(async (op) => {
+    getGitUserName()
     console.log('pro', op)
   })
 

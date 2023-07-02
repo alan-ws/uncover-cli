@@ -1,5 +1,6 @@
-
 node_modules
 dist
+examples
+
 #uncover
 uncover.json
