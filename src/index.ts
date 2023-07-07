@@ -10,7 +10,48 @@ import {
 } from "node:fs";
 import { access, constants, lstat } from "node:fs/promises";
 import path from "node:path";
-import { exit, pid } from "node:process";
+import { exit } from "node:process";
+import { promisify } from "node:util";
+import { exec } from "node:child_process";
+import { Separator, select } from "@inquirer/prompts";
+import { basic } from "./scripts/index.js";
+
+const execified = promisify(exec);
+
+async function streamableExec(command: string): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const child = exec(command);
+    child.stdout?.on('data', (chunk: any) => {
+      if (chunk.toLowerCase().match('updating')) {
+        console.log('update your package manager')
+        resolve(1);
+      } else {
+        console.log(chunk);
+      }
+    })
+    child.stderr?.on('data', (chunk: any) => {
+      console.log(chunk);
+      resolve(1)
+    })
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(code);
+      } else {
+        reject(code);
+      }
+    });
+  });
+}
+
+async function canAccessR_OK(args: string) {
+  try {
+    await access(args, constants.R_OK);
+    console.log(`uncover can access: ${args}`);
+  } catch (err) {
+    console.log(`uncover does not have read permissions for: ${args}`);
+    exit(1);
+  }
+}
 
 let program = new Command();
 
@@ -22,16 +63,6 @@ program
   .description("An example CLI for managing a directory")
   .usage("<command> [options] [...]");
 program.option("-v, --verbose", "enable verbose mode");
-
-function canAccessR_OK(args: string) {
-  try {
-    access(args, constants.R_OK);
-    console.log(`uncover can access: ${args}`);
-  } catch (err) {
-    console.log(`uncover does not have read permissions for: ${args}`);
-    exit(1);
-  }
-}
 
 async function LinkCommand() {
   const program = new Command("link");
@@ -59,7 +90,6 @@ async function LinkCommand() {
   );
   program.action(async (args) => {
     let { directory, projectId, teamId, gitUsername } = args;
-    console.log(projectId);
 
     enum Filenames {
       uncover = "uncover.json",
@@ -92,43 +122,43 @@ async function LinkCommand() {
       console.debug("directory check: ", err);
     }
 
+    if (gitUsername === "git config --list") {
+      canAccessR_OK(path.join(directory, ".git"));
+      const { stderr, stdout } = await execified(gitUsername);
+      if (stderr) exit(1);
+      const gitUsernameRegex = stdout.match(/user\.name=(.*)\n/)
+      gitUsername = gitUsernameRegex && gitUsernameRegex[1];
+    }
+
+    if (projectId === ".vercel/project.json") {
+      canAccessR_OK(path.join(directory, projectId));
+      const file = JSON.parse(
+        readFileSync(path.join(directory, projectId), {
+          encoding: "utf-8",
+        })
+      );
+      projectId = file.projectId;
+    }
+
+    if (teamId === ".vercel/project.json") {
+      canAccessR_OK(path.join(directory, teamId));
+      const file = JSON.parse(
+        readFileSync(path.join(directory, teamId), {
+          encoding: "utf-8",
+        })
+      );
+      teamId = file.orgId;
+    }
+
     canAccessR_OK(directory);
+
     writeFileSync(
       path.join(directory, Filenames.uncover),
       JSON.stringify({
         uncover: "enabled",
-        projectId:
-          projectId.match(".vercel/project.json") !== null
-            ? ((): string => {
-                canAccessR_OK(path.join(directory, projectId));
-                const file = JSON.parse(
-                  readFileSync(path.join(directory, projectId), {
-                    encoding: "utf-8",
-                  })
-                );
-                return file.projectId;
-              })()
-            : projectId,
-        teamId: teamId.match(".vercel/project.json") !== null
-          ? ((): string => {
-              canAccessR_OK(path.join(directory, teamId));
-              const file = JSON.parse(
-                readFileSync(path.join(directory, teamId), {
-                  encoding: "utf-8",
-                })
-              );
-              return file.orgId;
-            })()
-          : teamId,
-        // gitUserName: await (async (): string => {
-        //   canAccessR_OK(path.join(directory, ".git"));
-        //   const { stderr, stdout } = await execified("git config --list");
-        //   if (stderr) exit(1);
-        //   console.log(stdout.match(/user\.name=(.*)\n/)![1]);
-        //   return stdout.match(/user\.name=(.*)\n/) === null
-        //     ? null
-        //     : stdout.match(/user\.name=(.*)\n/)![1];
-        // })(),
+        projectId: projectId,
+        teamId: teamId,
+        gitUserName: gitUsername
       }),
       { encoding: "utf-8" }
     );
@@ -154,13 +184,13 @@ async function LinkCommand() {
       if (existsSync(path.join(directory, Filenames.git))) {
         console.log("adding uncover.json to gitignore");
         appendFileSync(
-          path.join(directory, Filenames.vercel),
+          path.join(directory, Filenames.git),
           "\n#uncover\nuncover.json"
         );
       } else {
         console.log("adding gitignore and appending uncover.json");
         writeFileSync(
-          path.join(directory, Filenames.vercel),
+          path.join(directory, Filenames.git),
           "#uncover\nuncover.json",
           {
             encoding: "utf-8",
@@ -172,5 +202,68 @@ async function LinkCommand() {
   return program;
 }
 
+async function InstallCommand() {
+  const program = new Command('install')
+  program.description('default non-interactive installation')
+  program.option('-i --interactive', 'install from binary and select packages')
+  program.action(async (args) => {
+    if (program.args.length > 1) {
+      throw Error('install does not accept arguements')
+    }
+
+    if (args.interactive === true) {
+      console.log('Not implemented')
+      return
+    }
+
+    let answer: string | undefined;
+    if (process.platform === "win32") {
+      answer = await select({
+        message: "Select your Windows package manner",
+        choices: [
+          new Separator("== Package Managers [Enter to select] =="),
+          { value: "choco" },
+          { value: "scoop" },
+          { value: "winget" },
+          { value: "other" },
+        ],
+      });
+    }
+
+    if (process.platform === "darwin") {
+      answer = await select({
+        message: "Select your MacOS package manner",
+        choices: [
+          new Separator("== Package Managers [Enter to select] =="),
+          { value: "brew" },
+          { value: "other" },
+        ],
+      });
+    }
+
+    if (answer === "other") {
+      console.log(
+        `Use -i or --interactive with uncover install\n`
+      );
+      exit(1);
+    } else {
+      try {
+        exit(await streamableExec(`${answer} install k6`) ?? 1);
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  })
+  return program
+}
+
+async function RunCommand() {
+  const program = new Command("run")
+  basic('http')
+  return program
+}
+
 program.addCommand(await LinkCommand());
+program.addCommand(await InstallCommand());
+program.addCommand(await RunCommand());
 await program.parseAsync(process.argv);
