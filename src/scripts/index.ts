@@ -1,3 +1,5 @@
+import { } from "k6"
+
 const basic = (url: string) => `
 import http from "k6/http";
 import { sleep } from "k6";

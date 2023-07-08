@@ -258,8 +258,28 @@ async function InstallCommand() {
 }
 
 async function RunCommand() {
+  // some of the options
+  // quiet (very little output)
+  // detached (no output other than the PID)
+  /* 
+    could have default values for VUS (based on low -> high traffic & test type) and DURATION (based on test type)
+    ability to pass in an options file -> to add to the options config of k6
+      lets make this file yaml and the ability to add in scenarios
+  */
   const program = new Command("run")
-  basic('http')
+  program.description("run various tests locally or burst to remote")
+  // program.command("load")
+  //   .description("run a load test")
+  program.command("smoke")
+    .description("run a smoke test")
+  // program.command("stress")
+  //   .description("run a stress test")
+  // program.command("soak")
+  //   .description("run a soak test")
+  // program.command("spike")
+  //   .description("run a spike test")
+  // program.command("breakpoint")
+  //   .description("run a breakpoint test")
   return program
 }
 
